@@ -114,9 +114,10 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <h2>今回の練習</h2>
     <table><thead><tr><th>文</th><th>一致</th><th>秒（目安）</th><th>言葉以外</th></tr></thead><tbody id="log"><tr><td colspan="4">まだありません</td></tr></tbody></table>
     <div class="row"><button id="copy" type="button">結果をコピー</button><button id="save" type="button">結果をファイルに保存</button><button id="clear" type="button">結果を消す</button></div>
-    <p class="note" style="margin-top:6px">iPhoneでは「ファイルに保存」で共有の画面が出ます。「"ファイル"に保存」→ iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでください。</p>
+    <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
+    <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-8（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-9（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -370,18 +371,18 @@ if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('�
   $('play').addEventListener('click', () => { const c = cards[cur]; if (!c || !audioByIdx[c.i]) return; if (player) player.pause(); player = new Audio(audioByIdx[c.i]); player.play().catch(() => {}); });
   $('fMust').addEventListener('click', () => setFilter('must'));
   $('copy').addEventListener('click', async () => { const s = report(); try { await navigator.clipboard.writeText(s); $('copy').textContent = 'コピーしました'; } catch (_) { $('copy').textContent = 'コピーできませんでした'; } setTimeout(() => $('copy').textContent = '結果をコピー', 1800); });
-  $('save').addEventListener('click', async () => {
-    const d = new Date();
-    const name = `読み合わせ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.md`;
-    const text = report();
-    // iPhone：共有シートを出し、「"ファイル"に保存」で練習記録フォルダへ
-    try {
-      const f = new File([text], name, {type: 'text/plain'});
-      if (navigator.canShare && navigator.canShare({files: [f]})) { await navigator.share({files: [f]}); return; }
-    } catch (e) { if (e && e.name === 'AbortError') return; }
-    const b = new Blob([text], {type: 'text/markdown'}); const a = document.createElement('a');
-    a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  const fileName = () => { const d = new Date(); return `読み合わせ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.md`; };
+  // 1回で保存：Safariのダウンロード先（設定で 練習記録 にしておく）へ直接保存
+  $('save').addEventListener('click', () => {
+    const b = new Blob([report()], {type: 'application/octet-stream'}); const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = fileName(); document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    $('save').textContent = '保存しました（ダウンロード先）'; setTimeout(() => $('save').textContent = '結果をファイルに保存', 2000);
+  });
+  // 保存できないとき：共有の画面から「"ファイル"に保存」
+  $('share').addEventListener('click', async () => {
+    try { const f = new File([report()], fileName(), {type: 'text/plain'}); if (navigator.canShare && navigator.canShare({files: [f]})) { await navigator.share({files: [f]}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    showWarn('この端末では共有から保存できません。「結果をコピー」を使ってください。');
   });
   $('clear').addEventListener('click', () => { Object.values(audioByIdx).forEach(u => URL.revokeObjectURL(u)); audioByIdx = {}; results = {}; render(); renderLog(); });
 
