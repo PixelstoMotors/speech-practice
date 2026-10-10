@@ -120,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-15（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-16（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -184,12 +184,15 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 > 本日できなかった点は、チャットで進めさせてください。
 > 本日はありがとうございました。`;
 
+  // 曜日の（火）は声に出しにくいので、カードでは「火曜日」と出す（10/10 島津さん）
+  const wdSay = t => t.replace(/([0-9０-９日])\s*[（(]([月火水木金土日])[）)]/g, '$1$2曜日');
+  const wdNorm = t => wdSay(t).replace(/([月火水木金土日])曜日/g, '$1曜'); // 比べるときは「火曜」「火曜日」を同じに扱う
   const clean = t => t.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]+)`/g, '$1').trim();
 
   function parse(md) {
     const lines = md.replace(/\r/g, '').split('\n');
     let title = '', secs = [], cur = null;
-    const add = t => { t = t.trim(); if (!t) return;
+    const add = t => { t = wdSay(t.trim()); if (!t) return;
       if (t.startsWith('★')) { cur.lines.push({k: 'must', t: t.replace(/^★\s*/, '')}); cur.star = true; }
       else cur.lines.push({k: 'say', t}); };
     for (let i = 0; i < lines.length; i++) {
@@ -276,7 +279,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   // 文字起こしの漢字・ひらがなの書き分けは違いに数えない（位＝くらい など）
   const KANA = [[/位/g, 'くらい'], [/下さい/g, 'ください'], [/頂/g, 'いただ'], [/致し/g, 'いたし'], [/宜しく/g, 'よろしく'], [/分かり/g, 'わかり'], [/判り/g, 'わかり'], [/出来/g, 'でき'], [/御社/g, 'おんしゃ'], [/恩社/g, 'おんしゃ']];
   const kanaFix = s => KANA.reduce((t, [r, k]) => t.replace(r, k), s);
-  const reading = s => kata2hira(kanaFix(norm(s))).replace(/[A-Za-z]/g, ch => ABC[ch.toUpperCase()] || ch);
+  const reading = s => kata2hira(kanaFix(norm(wdNorm(s)))).replace(/[A-Za-z]/g, ch => ABC[ch.toUpperCase()] || ch);
   function diff(a, b) { // a=台本, b=話した
     const n = a.length, m = b.length, dp = Array.from({length: n + 1}, () => new Uint16Array(m + 1));
     for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
