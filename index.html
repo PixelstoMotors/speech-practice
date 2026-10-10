@@ -217,6 +217,9 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 
   // 文字の比較（句読点と空白は無視）
   const norm = s => s.replace(/[\s、。，．,.!！?？「」『』（）()・…〜~：:；;"'“”‘’\-ー―]/g, m => m === 'ー' ? 'ー' : '').replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+  const ABC = {A:'えー',B:'びー',C:'しー',D:'でぃー',E:'いー',F:'えふ',G:'じー',H:'えいち',I:'あい',J:'じぇー',K:'けー',L:'える',M:'えむ',N:'えぬ',O:'おー',P:'ぴー',Q:'きゅー',R:'あーる',S:'えす',T:'てぃー',U:'ゆー',V:'ぶい',W:'だぶりゅー',X:'えっくす',Y:'わい',Z:'ぜっと'};
+  const kata2hira = s => s.replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  const reading = s => kata2hira(norm(s)).replace(/[A-Za-z]/g, ch => ABC[ch.toUpperCase()] || ch);
   function diff(a, b) { // a=台本, b=話した
     const n = a.length, m = b.length, dp = Array.from({length: n + 1}, () => new Uint16Array(m + 1));
     for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
@@ -288,10 +291,17 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   function finish() {
     if (!target) return;
     const raw = (finalText + interim).trim();
-    const a = norm(target.t), b = norm(raw);
+    if (!raw || target.sec < 0.6) { // 押し間違い・聞き取りなしは記録しない
+      $('said').textContent = !raw ? '聞き取れませんでした。ボタンを押したまま話して、言い終わってから離してください' : 'ボタンを押す時間が短すぎました。押したまま話してください';
+      target = null; return;
+    }
+    const a = reading(target.t), b = reading(raw);
     const {ops, same} = diff(a, b);
     const score = a.length ? Math.round(same / Math.max(a.length, b.length) * 100) : 0;
-    results[target.i] = {raw, ops, score, sec: target.sec, fill: countFillers(raw)};
+    const fs = countFillers(b), fa = countFillers(a); // 台本の「A（えー）」などは数えない
+    Object.keys(fs.o).forEach(k => { fs.o[k] = Math.max(0, fs.o[k] - (fa.o[k] || 0)); });
+    fs.tot = Object.values(fs.o).reduce((x, y) => x + y, 0);
+    results[target.i] = {raw, ops, score, sec: target.sec, fill: fs};
     target = null;
     const keep = track.scrollLeft; render(); track.scrollLeft = keep; updatePos(); showResult(); renderLog();
   }
