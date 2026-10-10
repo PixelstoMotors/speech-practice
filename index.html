@@ -46,7 +46,7 @@ main{padding:12px 16px 0;max-width:720px;margin:0 auto}
 .card .sec{font-size:13.5px;color:var(--card-sub)}
 .card .t{font-size:25px;line-height:1.75;font-weight:600;flex:1;margin:8px 0}
 .card .m{font-size:13.5px;color:var(--time);display:flex;justify-content:space-between;gap:8px}
-.card .m .done{color:#9be3b2}
+.card .m .done{color:#9be3b2}.card .m .done small{color:#a9adb6;font-size:12.5px;margin-left:4px}
 .card.must{background:var(--must);box-shadow:inset 0 0 0 3px var(--must-edge)}
 .card.must .lb{font-size:14px;font-weight:700;color:var(--must-fg);margin-top:4px}
 .card.sub{background:#2b2d33}.card.sub .t{font-size:21px;color:#e6e8ec}
@@ -120,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-18（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-19（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -133,7 +133,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 
   const $ = id => document.getElementById(id);
   const track = $('track'), micBtn = $('mic');
-  let doc = null, cards = [], filter = 'all', results = {}, cur = 0;
+  let doc = null, cards = [], filter = 'all', results = {}, tries = {}, cur = 0; // results＝最新、tries＝その文の全部の回
 
   const SAMPLE = `# 共通の言い回し（定例でよく使う型）
 ## 1. 冒頭
@@ -268,7 +268,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 
   function load(md, name) {
     doc = parse(md);
-    results = {};
+    results = {}; tries = {};
     // 案件カラー：見出しの帯だけ色を変える（カードの上の線は島津さんの判断で入れない 10/10）
     document.documentElement.style.setProperty('--pc', doc.color || 'transparent');
     document.querySelector('header').style.background = doc.color || '';
@@ -284,7 +284,8 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     track.innerHTML = cards.map(c => {
       if (c.k === 'sub') return `<div class="card sub"><div class="sec">${esc(c.sec)}</div><div class="t">${esc(c.t)}</div><div class="m"><span>ここから</span></div></div>`;
       const r = results[c.i];
-      const done = r ? `<span class="done">一致 ${r.score}%</span>` : '';
+      const prev = r && r.n > 1 ? tries[c.i][r.n - 2].score : null;
+      const done = r ? `<span class="done">${r.n > 1 ? `${r.n}回目 ` : ''}一致 ${r.score}%${prev !== null ? `<small>（前回 ${prev}%）</small>` : ''}</span>` : '';
       const lb = c.k === 'must' ? '<div class="lb">決める1文　ここで止まって言い切る</div>' : '';
       return `<div class="card${c.k === 'must' ? ' must' : ''}"><div class="sec">${esc(c.sec)}</div>${lb}<div class="t">${esc(c.t)}</div><div class="m"><span>${c.t.length}字・約${secsOf(c.t)}秒</span>${done}</div></div>`;
     }).join('');
@@ -313,7 +314,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   const ABC = {A:'えー',B:'びー',C:'しー',D:'でぃー',E:'いー',F:'えふ',G:'じー',H:'えいち',I:'あい',J:'じぇー',K:'けー',L:'える',M:'えむ',N:'えぬ',O:'おー',P:'ぴー',Q:'きゅー',R:'あーる',S:'えす',T:'てぃー',U:'ゆー',V:'ぶい',W:'だぶりゅー',X:'えっくす',Y:'わい',Z:'ぜっと'};
   const kata2hira = s => s.replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
   // 文字起こしの漢字・ひらがなの書き分けは違いに数えない（位＝くらい など）
-  const KANA = [[/位/g, 'くらい'], [/下さい/g, 'ください'], [/頂/g, 'いただ'], [/致し/g, 'いたし'], [/宜しく/g, 'よろしく'], [/分かり/g, 'わかり'], [/判り/g, 'わかり'], [/出来/g, 'でき'], [/御社/g, 'おんしゃ'], [/恩社/g, 'おんしゃ']];
+  const KANA = [[/位/g, 'くらい'], [/下さい/g, 'ください'], [/頂/g, 'いただ'], [/致し/g, 'いたし'], [/宜しく/g, 'よろしく'], [/分かり/g, 'わかり'], [/判り/g, 'わかり'], [/出来/g, 'でき'], [/恩社/g, '御社'], [/音社/g, '御社']];
   const kanaFix = s => KANA.reduce((t, [r, k]) => t.replace(r, k), s);
   const reading = s => kata2hira(kanaFix(norm(wdNorm(s)))).replace(/[A-Za-z]/g, ch => ABC[ch.toUpperCase()] || ch);
   function diff(a, b) { // a=台本, b=話した
@@ -344,19 +345,20 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     const scls = r.score >= 90 ? 'good' : 'bad';
     const xcls = r.extra >= 2 ? 'bad' : 'good';
     const fl = r.fill.tot ? `<span>えっと等（文字に出た分） <b class="bad">${r.fill.tot}</b></span>` : '';
-    $('stats').innerHTML = `<span>一致 <b class="${scls}">${r.score}%</b></span><span>秒 <b class="${tcls}">${r.sec}</b>（目安 ${target}）</span><span>言葉以外の時間 <b class="${xcls}">${r.extra}秒</b></span>${fl}`;
+    const pv = r.n > 1 ? tries[c.i][r.n - 2].score : null;
+    $('stats').innerHTML = `<span>${r.n}回目</span><span>一致 <b class="${scls}">${r.score}%</b>${pv !== null ? `（前回 ${pv}%）` : ''}</span><span>秒 <b class="${tcls}">${r.sec}</b>（目安 ${target}）</span><span>言葉以外の時間 <b class="${xcls}">${r.extra}秒</b></span>${fl}`;
   }
 
   function renderLog() {
     const done = doc.cards.map((c, i) => ({c, i, r: results[i]})).filter(x => x.r);
-    $('log').innerHTML = done.length ? done.map(x => `<tr><td>${esc(x.c.t.slice(0, 14))}${x.c.t.length > 14 ? '…' : ''}</td><td>${x.r.score}%</td><td>${x.r.sec}（${secsOf(x.c.t)}）</td><td>${x.r.extra}秒</td></tr>`).join('') : '<tr><td colspan="4">まだありません</td></tr>';
+    $('log').innerHTML = done.length ? done.map(x => `<tr><td>${esc(x.c.t.slice(0, 14))}${x.c.t.length > 14 ? '…' : ''}</td><td>${x.r.score}%${x.r.n > 1 ? `<br><small>${x.r.n}回目</small>` : ''}</td><td>${x.r.sec}（${secsOf(x.c.t)}）</td><td>${x.r.extra}秒</td></tr>`).join('') : '<tr><td colspan="4">まだありません</td></tr>';
   }
 
   function report() {
     const done = doc.cards.map((c, i) => ({c, i, r: results[i]})).filter(x => x.r);
     const d = new Date(); const ts = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     let s = `# 読み合わせの記録（${ts}）\n\n台本：${doc.title}\n\n`;
-    done.forEach(x => { s += `## ${x.c.k === 'must' ? '★' : ''}${x.c.sec}\n- 台本：${x.c.t}\n- 話した：${x.r.raw}\n- 一致 ${x.r.score}%／${x.r.sec}秒（目安${secsOf(x.c.t)}秒）／言葉以外の時間 ${x.r.extra}秒／えっと等（文字に出た分） ${x.r.fill.tot}\n\n`; });
+    done.forEach(x => (tries[x.i] || [x.r]).forEach((r, k, all) => { s += `## ${x.c.k === 'must' ? '★' : ''}${x.c.sec}${all.length > 1 ? `（${k + 1}回目）` : ''}\n- 台本：${x.c.t}\n- 話した：${r.raw}\n- 一致 ${r.score}%／${r.sec}秒（目安${secsOf(x.c.t)}秒）／言葉以外の時間 ${r.extra}秒／えっと等（文字に出た分） ${r.fill.tot}\n\n`; }));
     return s;
   }
 
@@ -450,7 +452,8 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     Object.keys(fs.o).forEach(k => { fs.o[k] = Math.max(0, fs.o[k] - (fa.o[k] || 0)); });
     fs.tot = Object.values(fs.o).reduce((x, y) => x + y, 0);
     const extra = Math.max(0, Math.round((target.sec - b.length / CPS - 0.5) * 10) / 10); // 押してから話し始めるまでの0.5秒は除く
-    results[target.i] = {raw, ops, score, sec: target.sec, fill: fs, extra};
+    (tries[target.i] = tries[target.i] || []).push({raw, ops, score, sec: target.sec, fill: fs, extra});
+    results[target.i] = {raw, ops, score, sec: target.sec, fill: fs, extra, n: tries[target.i].length};
     target = null;
     const keep = track.scrollLeft; render(); track.scrollLeft = keep; updatePos(); showResult(); renderLog();
   }
@@ -489,7 +492,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     try { const f = new File([report()], fileName(), {type: 'text/plain'}); if (navigator.canShare && navigator.canShare({files: [f]})) { await navigator.share({files: [f]}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
     showWarn('この端末では共有から保存できません。「結果をコピー」を使ってください。');
   });
-  $('clear').addEventListener('click', () => { Object.values(audioByIdx).forEach(u => URL.revokeObjectURL(u)); audioByIdx = {}; results = {}; render(); renderLog(); });
+  $('clear').addEventListener('click', () => { Object.values(audioByIdx).forEach(u => URL.revokeObjectURL(u)); audioByIdx = {}; results = {}; tries = {}; render(); renderLog(); });
 
   // 業務モニターのボタンから開いたとき：URLの「#」より後ろに台本が入っている（#の後ろはサーバーへ送られない）
   function fromHash() {
