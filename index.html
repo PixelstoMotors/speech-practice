@@ -108,6 +108,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <h2>今回の練習</h2>
     <table><thead><tr><th>文</th><th>一致</th><th>秒（目安）</th><th>えっと等</th></tr></thead><tbody id="log"><tr><td colspan="4">まだありません</td></tr></tbody></table>
     <div class="row"><button id="copy" type="button">結果をコピー</button><button id="save" type="button">結果をファイルに保存</button><button id="clear" type="button">結果を消す</button></div>
+    <p class="note" style="margin-top:6px">iPhoneでは「ファイルに保存」で共有の画面が出ます。「"ファイル"に保存」→ iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでください。</p>
   </section>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。「えっと」は文字起こしで省かれることがあり、実際より少なく出る場合があります。</p>
 </main>
@@ -313,7 +314,19 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   $('fAll').addEventListener('click', () => setFilter('all'));
   $('fMust').addEventListener('click', () => setFilter('must'));
   $('copy').addEventListener('click', async () => { const s = report(); try { await navigator.clipboard.writeText(s); $('copy').textContent = 'コピーしました'; } catch (_) { $('copy').textContent = 'コピーできませんでした'; } setTimeout(() => $('copy').textContent = '結果をコピー', 1800); });
-  $('save').addEventListener('click', () => { const b = new Blob([report()], {type: 'text/markdown'}); const a = document.createElement('a'); const d = new Date(); a.href = URL.createObjectURL(b); a.download = `読み合わせ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.md`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); });
+  $('save').addEventListener('click', async () => {
+    const d = new Date();
+    const name = `読み合わせ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.md`;
+    const text = report();
+    // iPhone：共有シートを出し、「"ファイル"に保存」で練習記録フォルダへ
+    try {
+      const f = new File([text], name, {type: 'text/plain'});
+      if (navigator.canShare && navigator.canShare({files: [f]})) { await navigator.share({files: [f]}); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    const b = new Blob([text], {type: 'text/markdown'}); const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
   $('clear').addEventListener('click', () => { results = {}; render(); renderLog(); });
 
   load(SAMPLE, '');
