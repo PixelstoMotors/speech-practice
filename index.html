@@ -84,7 +84,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 <body>
 <header>
   <h1>台本読み合わせ</h1>
-  <p id="sub">共通の言い回し（37文）を表示中。台本を読み込むと差し替わります</p>
+  <p id="sub">共通の言い回し（66文）を表示中。台本を読み込むと差し替わります</p>
 </header>
 <main>
   <div class="bar">
@@ -120,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-17（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-18（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -182,7 +182,43 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 > 御社には、原稿を10月16日までにお願いいたします。
 > 弊社からは、直したデザインを10月20日にお送りします。
 > 本日できなかった点は、チャットで進めさせてください。
-> 本日はありがとうございました。`;
+> 本日はありがとうございました。
+## 11. 受け答え：受け止める
+> 承知いたしました。
+> かしこまりました。
+> おっしゃるとおりです。
+> ご意図、よく分かりました。
+> 大変参考になります。
+## 12. 受け答え：お礼
+> ありがとうございます。
+> ご確認いただき、ありがとうございます。
+> お忙しいところ、ご対応いただきありがとうございます。
+> 早速ご連絡いただき、ありがとうございます。
+## 13. 受け答え：おわび
+> 申し訳ありません。
+> 大変失礼いたしました。
+> ご不便をおかけして、申し訳ございません。
+> こちらの確認が足りず、申し訳ありませんでした。
+> ご指摘ありがとうございます。すぐに修正いたします。
+## 14. 受け答え：聞き返す・確かめる
+> 恐れ入ります、もう一度お伺いしてもよろしいでしょうか。
+> 念のため、確認させてください。
+> トップの写真を差し替えるという理解で、お間違いないでしょうか。
+> 少し聞き取れなかったので、もう一度お願いできますでしょうか。
+## 15. 受け答え：すぐに答えられないとき
+> 確認してから、改めてご回答いたします。
+> 少しお時間をいただいてもよろしいでしょうか。
+> 担当に確認のうえ、本日中にご連絡いたします。
+> 私の一存では決められないため、社内で相談させてください。
+## 16. 受け答え：やわらかく断る
+> せっかくご提案いただいたのですが、今回は見送らせていただけますでしょうか。
+> ご希望に沿えず、申し訳ございません。
+> 今の日程の中では難しいため、別の形でご提案させてください。
+## 17. 受け答え：話をつなぐ・進める
+> ありがとうございます。では、次に進めさせていただきます。
+> 補足させていただきますと、
+> ほかにご質問はございますか。
+> 恐れ入りますが、お時間の都合で、次の議題に移らせてください。`;
 
   // 曜日の（火）は声に出しにくいので、カードでは「火曜日」と出す（10/10 島津さん）
   const wdSay = t => t.replace(/([0-9０-９日])\s*[（(]([月火水木金土日])[）)]/g, '$1$2曜日');
@@ -220,7 +256,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
       }
     }
     secs = secs.filter(s => !s.skip && s.lines.some(x => x.k !== 'sub'));
-    secs.forEach(s => { if (!s.star) s.lines.forEach(x => { if (x.k === 'say' && MUST_RE.test(x.t) && !NOT_MUST_RE.test(x.t)) x.k = 'must'; }); });
+    secs.forEach(s => { if (!s.star && !/受け答え/.test(s.title)) s.lines.forEach(x => { if (x.k === 'say' && MUST_RE.test(x.t) && !NOT_MUST_RE.test(x.t)) x.k = 'must'; }); });
     const out = [];
     secs.forEach(s => s.lines.forEach(x => out.push({sec: s.title, k: x.k, t: x.t})));
     const cm = md.match(/^[-*\s]*案件カラー[：:]\s*(#[0-9a-fA-F]{6})/m); // 台本ファイルに書いた色（ページには案件の情報を持たない）
@@ -236,7 +272,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     // 案件カラー：見出しの帯だけ色を変える（カードの上の線は島津さんの判断で入れない 10/10）
     document.documentElement.style.setProperty('--pc', doc.color || 'transparent');
     document.querySelector('header').style.background = doc.color || '';
-    $('sub').textContent = name ? `${doc.title || name}（${name}）` : '共通の言い回し（37文）を表示中。台本を読み込むと差し替わります';
+    $('sub').textContent = name ? `${doc.title || name}（${name}）` : '共通の言い回し（66文）を表示中。台本を読み込むと差し替わります';
     render();
     renderLog();
     if (!doc.cards.some(c => c.k !== 'sub')) showWarn('このファイルから話す文が見つかりませんでした。台本（…台本….md）か読み合わせ案（…読み合わせ案.md）を選んでください。');
