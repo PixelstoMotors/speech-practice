@@ -84,7 +84,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
 <body>
 <header>
   <h1>台本読み合わせ</h1>
-  <p id="sub">サンプルを表示中。台本を読み込むと差し替わります</p>
+  <p id="sub">共通の言い回し（37文）を表示中。台本を読み込むと差し替わります</p>
 </header>
 <main>
   <div class="bar">
@@ -120,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-16（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-17（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -135,7 +135,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   const track = $('track'), micBtn = $('mic');
   let doc = null, cards = [], filter = 'all', results = {}, cur = 0;
 
-  const SAMPLE = `# 練習用の話す文（定例でよく使う型）
+  const SAMPLE = `# 共通の言い回し（定例でよく使う型）
 ## 1. 冒頭
 > 本日もよろしくお願いいたします。録画と文字起こしをさせていただきます。
 > 本日は、デザインの確認、日程の確認、次回までのお願いの順で進めます。
@@ -236,7 +236,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     // 案件カラー：見出しの帯だけ色を変える（カードの上の線は島津さんの判断で入れない 10/10）
     document.documentElement.style.setProperty('--pc', doc.color || 'transparent');
     document.querySelector('header').style.background = doc.color || '';
-    $('sub').textContent = name ? `${doc.title || name}（${name}）` : 'サンプルを表示中。台本を読み込むと差し替わります';
+    $('sub').textContent = name ? `${doc.title || name}（${name}）` : '共通の言い回し（37文）を表示中。台本を読み込むと差し替わります';
     render();
     renderLog();
     if (!doc.cards.some(c => c.k !== 'sub')) showWarn('このファイルから話す文が見つかりませんでした。台本（…台本….md）か読み合わせ案（…読み合わせ案.md）を選んでください。');
