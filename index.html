@@ -116,7 +116,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="copy" type="button">結果をコピー</button><button id="save" type="button">結果をファイルに保存</button><button id="clear" type="button">結果を消す</button></div>
     <p class="note" style="margin-top:6px">iPhoneでは「ファイルに保存」で共有の画面が出ます。「"ファイル"に保存」→ iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでください。</p>
   </section>
-  <p class="note">ページの版：10/10-5（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-6（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。聞き返し用の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -278,7 +278,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   async function startRecording(idx) {
     if (!recordOn || !navigator.mediaDevices || !window.MediaRecorder) return;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({audio: true});
+      if (!stream || !stream.active) stream = await navigator.mediaDevices.getUserMedia({audio: true}); // 一度許可されたマイクを使い回し、毎回の確認を減らす
       chunks = [];
       mr = new MediaRecorder(stream);
       mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
@@ -286,7 +286,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
         const blob = new Blob(chunks, {type: mr.mimeType || 'audio/mp4'});
         if (audioByIdx[idx]) URL.revokeObjectURL(audioByIdx[idx]);
         if (blob.size) audioByIdx[idx] = URL.createObjectURL(blob);
-        stream.getTracks().forEach(t => t.stop()); stream = null; mr = null;
+        mr = null;
         const c = cards[cur]; if (c && c.i === idx) showPlay(idx);
       };
       mr.start();
@@ -356,7 +356,8 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   const setFilter = v => { filter = v; $('fAll').setAttribute('aria-pressed', v === 'all'); $('fMust').setAttribute('aria-pressed', v === 'must'); render(); };
   $('fAll').addEventListener('click', () => setFilter('all'));
   $('rOn').addEventListener('click', () => { recordOn = true; $('rOn').setAttribute('aria-pressed', true); $('rOff').setAttribute('aria-pressed', false); });
-  $('rOff').addEventListener('click', () => recOff());
+  $('rOff').addEventListener('click', () => { recOff(); if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && stream && !listening) { stream.getTracks().forEach(t => t.stop()); stream = null; } });
   $('play').addEventListener('click', () => { const c = cards[cur]; if (!c || !audioByIdx[c.i]) return; if (player) player.pause(); player = new Audio(audioByIdx[c.i]); player.play().catch(() => {}); });
   $('fMust').addEventListener('click', () => setFilter('must'));
   $('copy').addEventListener('click', async () => { const s = report(); try { await navigator.clipboard.writeText(s); $('copy').textContent = 'コピーしました'; } catch (_) { $('copy').textContent = 'コピーできませんでした'; } setTimeout(() => $('copy').textContent = '結果をコピー', 1800); });
