@@ -27,6 +27,7 @@
   --miss:#4a1714; --miss-fg:#ffb4ab; --extra:#13284d; --extra-fg:#bcd3ff; --ok:#4ade80;
   --btn:#e8eaee; --btn-fg:#111215; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.7 var(--font);padding:0 0 calc(24px + env(safe-area-inset-bottom))}
 header{background:#1a1b1f;color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px}
@@ -120,7 +121,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-19（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-20（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -293,7 +294,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     const musts = says.filter(c => c.k === 'must').length;
     const total = says.reduce((a, c) => a + c.t.length, 0);
     const tt = Math.round(total / CPS);
-    $('info').textContent = `話す文 ${says.length}（決める1文 ${musts}）・通しの目安 ${Math.floor(tt / 60)}分${tt % 60}秒。横にスワイプして、カードを選んでから話してください`;
+    $('info').textContent = `話す文 ${says.length}（決める1文 ${musts}）・通しの目安 ${Math.floor(tt / 60)}分${tt % 60}秒。${IOS ? '横にスワイプ' : '←→キーかスワイプ'}して、カードを選んでから話してください`;
     track.scrollLeft = 0; cur = 0; updatePos(); showResult();
   }
 
@@ -412,6 +413,24 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     };
     return r;
   }
+  // PC（iPhone・iPad以外）：iPhoneが鳴らす「始まり」「終わり」の音を、ページで同じ順に鳴らす（10/10 島津さん）
+  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let actx = null;
+  function beep(up) {
+    if (IOS) return; // iPhoneは本体が鳴らす
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      const t = actx.currentTime + 0.01;
+      (up ? [660, 990] : [990, 660]).forEach((f, k) => {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + k * 0.09); g.gain.exponentialRampToValueAtTime(0.25, t + k * 0.09 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + k * 0.09 + 0.08);
+        o.connect(g).connect(actx.destination); o.start(t + k * 0.09); o.stop(t + k * 0.09 + 0.09);
+      });
+    } catch (_) {}
+  }
+  const PRE = IOS ? 0 : 200; // PCは「始まりの音」が鳴り終わってから聞き始める（音を拾わないため）
   function start(ev) {
     if (micBtn.disabled || listening) return;
     if (!recordOn && !rec) return;
@@ -420,8 +439,11 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     finalText = ''; interim = ''; listening = true; t0 = performance.now();
     micBtn.classList.add('on'); micBtn.firstChild.textContent = recordOn ? '録音しています…' : '聞いています…';
     $('cmp').textContent = '—'; $('stats').innerHTML = '';
-    if (recordOn) { $('said').textContent = '（録音中。文字は出ません）'; startRecording(target.i); }
-    else { $('said').textContent = '…'; evLog = []; restarts = 0; try { rec.abort(); } catch (_) {} rec = makeRec(); logEv('押した'); try { rec.start(); } catch (_) { logEv('開始失敗'); } }
+    beep(true);
+    if (recordOn) { $('said').textContent = '（録音中。文字は出ません）'; const i = target.i; setTimeout(() => { if (listening) startRecording(i); }, PRE); }
+    else { $('said').textContent = '…'; evLog = []; restarts = 0; try { rec.abort(); } catch (_) {} rec = makeRec(); logEv('押した');
+      const go = () => { if (!listening) return; try { rec.start(); } catch (_) { logEv('開始失敗'); } };
+      PRE ? setTimeout(go, PRE) : go(); }
   }
   function stop(ev) {
     if (!listening) return;
@@ -430,13 +452,13 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     micBtn.classList.remove('on'); micBtn.firstChild.textContent = recordOn ? '押している間だけ録音' : '押している間だけ聞く';
     if (recordOn) {
       const t = target; target = null;
-      setTimeout(stopRecording, 250);
+      setTimeout(() => { stopRecording(); beep(false); }, 250);
       $('said').textContent = '録音しました。下の「▶ 自分の声を聞き返す」で聞けます。えっと・間・言い直しを耳で確かめてください';
       $('stats').innerHTML = `<span>秒 <b class="${t.sec > secsOf(t.t) * 1.3 ? 'bad' : 'good'}">${t.sec}</b>（目安 ${secsOf(t.t)}）</span>`;
       return;
     }
     logEv('離した');
-    setTimeout(() => { try { rec.stop(); } catch (_) { finish(); } }, 250); // 言い終わりを取りこぼさない
+    setTimeout(() => { try { rec.stop(); } catch (_) { finish(); } beep(false); }, 250); // 言い終わりを取りこぼさない
   }
   function finish() {
     if (!target) return;
@@ -463,6 +485,29 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   micBtn.addEventListener('mousedown', start);
   window.addEventListener('mouseup', () => stop());
   micBtn.addEventListener('contextmenu', e => e.preventDefault());
+  // PCのキーボード：スペースを押している間だけ聞く／←→で文を移動
+  const typing = e => /INPUT|TEXTAREA|SELECT/.test((e.target || {}).tagName || '');
+  window.addEventListener('keydown', e => {
+    if (typing(e)) return;
+    if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) start(e); }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault(); const el = track.children[0]; if (!el || listening) return;
+      const w = el.getBoundingClientRect().width + 10;
+      track.scrollTo({left: Math.round(track.scrollLeft / w + (e.key === 'ArrowRight' ? 1 : -1)) * w, behavior: 'smooth'});
+    }
+  });
+  window.addEventListener('keyup', e => { if (e.code === 'Space' && !typing(e)) { e.preventDefault(); stop(e); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } });
+  window.addEventListener('blur', () => stop());
+  if (!IOS) {
+    const k = document.createElement('p'); k.className = 'note'; k.style.margin = '6px 2px 0';
+    k.textContent = 'PC：スペースキーを押している間だけ聞く（ボタンを押しても同じ）。←→キーで文を移動。始まりと終わりの音はiPhoneと同じ順で鳴ります';
+    micBtn.after(k);
+    if (/Chrome\//.test(navigator.userAgent) && !/Edg\//.test(navigator.userAgent)) {
+      const c = document.createElement('p'); c.className = 'note'; c.style.margin = '2px 2px 0';
+      c.textContent = 'Chromeでは、声はGoogleの仕組みで文字になります（台本は送りません）。iPhoneと同じAppleの仕組みで使うときはSafariで開いてください';
+      k.after(c);
+    }
+  }
 
   function showWarn(t) { const w = $('warn'); w.textContent = t; w.hidden = false; }
   function hideWarn() { $('warn').hidden = true; }
