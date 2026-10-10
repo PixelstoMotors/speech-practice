@@ -119,9 +119,9 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <table><thead><tr><th>文</th><th>一致</th><th>秒（目安）</th><th>言葉以外</th></tr></thead><tbody id="log"><tr><td colspan="4">まだありません</td></tr></tbody></table>
     <div class="row"><button id="copy" type="button">結果をコピー</button><button id="save" type="button">結果をファイルに保存</button><button id="clear" type="button">結果を消す</button></div>
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
-    <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
+    <p class="note" style="margin-top:6px" id="saveNote">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-20（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-21（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -526,12 +526,48 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   $('copy').addEventListener('click', async () => { const s = report(); try { await navigator.clipboard.writeText(s); $('copy').textContent = 'コピーしました'; } catch (_) { $('copy').textContent = 'コピーできませんでした'; } setTimeout(() => $('copy').textContent = '結果をコピー', 1800); });
   const fileName = () => { const d = new Date(); return `読み合わせ_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}.md`; };
   // 1回で保存：Safariのダウンロード先（設定で 練習記録 にしておく）へ直接保存
-  $('save').addEventListener('click', () => {
+  // 保存：PC（Chrome・Edge）は、一度選んだ「練習記録」フォルダへ直接書き込む。選んだフォルダはこのブラウザの中だけに覚える
+  //       iPhone・Safariは、これまでどおりダウンロード（iPhoneはSafariのダウンロード先を練習記録にしてある）
+  const CAN_DIR = !IOS && 'showDirectoryPicker' in window;
+  const idb = (mode, fn) => new Promise((ok, ng) => { try { const q = indexedDB.open('yomiawase', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onerror = () => ng(q.error);
+    q.onsuccess = () => { try { const t = q.result.transaction('kv', mode); const r = fn(t.objectStore('kv')); t.oncomplete = () => ok(r && r.result); t.onerror = () => ng(t.error); } catch (e) { ng(e); } }; } catch (e) { ng(e); } });
+  const getDir = () => idb('readonly', st => st.get('dir')).catch(() => null);
+  const putDir = h => idb('readwrite', st => st.put(h, 'dir')).catch(() => null);
+  async function pickDir() {
+    const h = await window.showDirectoryPicker({id: 'renshu', mode: 'readwrite'});
+    if (h.name !== '練習記録') showWarn(`選んだのは「${h.name}」です。練習記録に入れるときは「保存先を選び直す」で 株式会社GIG → ナレッジ → 練習記録 を選んでください。`); else hideWarn();
+    await putDir(h); showDirName(h); return h;
+  }
+  function showDirName(h) { const n = $('dirName'); if (n) n.textContent = h ? `保存先：${h.name}` : '保存先：まだ選んでいません（最初の保存で選びます）'; }
+  function download() {
     const b = new Blob([report()], {type: 'application/octet-stream'}); const a = document.createElement('a');
     a.href = URL.createObjectURL(b); a.download = fileName(); document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
     $('save').textContent = '保存しました（ダウンロード先）'; setTimeout(() => $('save').textContent = '結果をファイルに保存', 2000);
+  }
+  $('save').addEventListener('click', async () => {
+    if (!CAN_DIR) return download();
+    try {
+      let h = await getDir();
+      if (h && (await h.queryPermission({mode: 'readwrite'})) !== 'granted' && (await h.requestPermission({mode: 'readwrite'})) !== 'granted') h = null;
+      if (!h) { showWarn('保存先のフォルダを選んでください：株式会社GIG → ナレッジ → 練習記録（最初の1回だけ）'); h = await pickDir(); }
+      const name = fileName(); const w = await (await h.getFileHandle(name, {create: true})).createWritable(); await w.write(report()); await w.close();
+      $('save').textContent = `${h.name}に保存しました`; setTimeout(() => $('save').textContent = '結果をファイルに保存', 2500);
+    } catch (e) {
+      if (e && e.name === 'AbortError') { hideWarn(); return; }
+      showWarn('練習記録に書き込めなかったので、ダウンロードに保存しました。'); download();
+    }
   });
+  if (CAN_DIR) {
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<button id="redir" type="button">保存先を選び直す</button><span id="dirName" class="note" style="margin:0;align-self:center"></span>';
+    $('save').closest('.row').after(r);
+    $('redir').addEventListener('click', () => pickDir().catch(() => {}));
+    getDir().then(showDirName);
+    $('saveNote').textContent = 'PC：「結果をファイルに保存」は、選んだフォルダ（株式会社GIG → ナレッジ → 練習記録）に直接書き込みます。最初の1回だけフォルダを選び、次からは押すだけです（ブラウザを開き直したときは「許可」を1回押します）。';
+  } else if (!IOS) {
+    $('saveNote').textContent = 'PC（Safari）：保存はMacの「ダウンロード」に入ります。練習記録に直接入れたいときはChromeで開いてください。';
+  }
   // 保存できないとき：共有の画面から「"ファイル"に保存」
   $('share').addEventListener('click', async () => {
     try { const f = new File([report()], fileName(), {type: 'text/plain'}); if (navigator.canShare && navigator.canShare({files: [f]})) { await navigator.share({files: [f]}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
