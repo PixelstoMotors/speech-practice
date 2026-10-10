@@ -121,7 +121,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px" id="saveNote">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-23（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-24（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -241,7 +241,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   // 各組の中で台本に出てくる書き方に、話した言葉の別の書き方を置き換える
   const VARIANTS = [['のうえ', 'の上'], ['とおり', '通り'], ['ほか', '他'], ['沿え', '添え'], ['わかり', '分かり', '判り'], ['ください', '下さい'],
     ['いたし', '致し'], ['いただ', '頂'], ['でき', '出来'], ['よろしく', '宜しく'], ['くらい', '位'], ['ころ', '頃'], ['ござい', '御座い'],
-    ['原稿', '現行'], ['社内', '車内'], ['御社', '恩社', '音社'], ['意図', '糸'], ['早速', 'さっそく'], ['ありがとう', '有難う']];
+    ['原稿', '現行'], ['社内', '車内'], ['御社', '恩社', '音社'], ['意図', '糸'], ['早速', 'さっそく'], ['ありがとう', '有難う'], ['まいり', '参り'], ['いたださ', '頂さ']];
   const align = (script, said) => VARIANTS.reduce((t, g) => { const k = g.find(v => script.includes(v)); return k ? g.filter(v => v !== k).reduce((u, v) => u.split(v).join(k), t) : t; }, said);
   const kanaFix = s => s;
   const reading = s => kata2hira(kanaFix(norm(wdNorm(s)))).replace(/[A-Za-z]/g, ch => ABC[ch.toUpperCase()] || ch);
