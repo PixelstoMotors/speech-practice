@@ -91,9 +91,9 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
       <button id="fAll" type="button" aria-pressed="true">全部</button>
       <button id="fMust" type="button" aria-pressed="false">決める1文だけ</button>
     </div>
-    <div class="seg" role="group" aria-label="聞き返し用の録音">
-      <button id="rOn" type="button" aria-pressed="true">録音も残す</button>
-      <button id="rOff" type="button" aria-pressed="false">文字だけ</button>
+    <div class="seg" role="group" aria-label="確認のしかた">
+      <button id="rOff" type="button" aria-pressed="true">文字で確認</button>
+      <button id="rOn" type="button" aria-pressed="false">録音して聞く</button>
     </div>
   </div>
   <div id="warn" class="warn" hidden></div>
@@ -116,8 +116,8 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="copy" type="button">結果をコピー</button><button id="save" type="button">結果をファイルに保存</button><button id="clear" type="button">結果を消す</button></div>
     <p class="note" style="margin-top:6px">iPhoneでは「ファイルに保存」で共有の画面が出ます。「"ファイル"に保存」→ iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでください。</p>
   </section>
-  <p class="note">ページの版：10/10-7（開き直してこの番号になっていれば最新です）</p>
-  <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。聞き返し用の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
+  <p class="note">ページの版：10/10-8（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
 (() => {
@@ -247,7 +247,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     const c = cards[cur];
     const r = c ? results[c.i] : null;
     $('playRow').hidden = !(c && audioByIdx[c.i]);
-    if (!r) { $('said').textContent = 'ここに出ます'; $('cmp').textContent = '—'; $('stats').innerHTML = ''; return; }
+    if (!r) { $('said').textContent = recordOn && c && audioByIdx[c.i] ? '録音があります。「▶ 自分の声を聞き返す」で聞けます' : 'ここに出ます'; $('cmp').textContent = '—'; $('stats').innerHTML = ''; return; }
     $('said').textContent = r.raw || '（聞き取れませんでした）';
     $('cmp').innerHTML = opsHtml(r.ops);
     const target = secsOf(c.t);
@@ -274,7 +274,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   // 音声認識（押している間だけ）
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, listening = false, finalText = '', interim = '', t0 = 0, target = null;
-  let recordOn = true, mr = null, stream = null, chunks = [], audioByIdx = {}, player = null;
+  let recordOn = false, mr = null, stream = null, chunks = [], audioByIdx = {}, player = null;
   async function startRecording(idx) {
     if (!recordOn || !navigator.mediaDevices || !window.MediaRecorder) return;
     try {
@@ -291,35 +291,44 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
       };
       mr.start();
       if (!listening) stopRecording(); // すでに指を離していた
-    } catch (_) { recOff('この端末では録音ができませんでした。「文字だけ」で使えます。'); }
+    } catch (_) { recOff('この端末では録音ができませんでした。「文字で確認」で使えます。'); }
   }
   function stopRecording() { if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch (_) {} } }
   function showPlay(idx) { $('playRow').hidden = !audioByIdx[idx]; }
-  function recOff(msg) { recordOn = false; $('rOn').setAttribute('aria-pressed', false); $('rOff').setAttribute('aria-pressed', true); if (msg) showWarn(msg); }
-  if (!SR) { micBtn.disabled = true; showWarn('このブラウザでは音声の文字起こしが使えません。iPhoneのSafariで開いてください。'); }
+  function recOff(msg) { recordOn = false; $('rOn').setAttribute('aria-pressed', false); $('rOff').setAttribute('aria-pressed', true); micBtn.firstChild.textContent = '押している間だけ聞く'; micBtn.querySelector('small').textContent = 'カードの文を見ながら話して、指を離す'; if (msg) showWarn(msg); }
+  function recOnMode() { recordOn = true; $('rOn').setAttribute('aria-pressed', true); $('rOff').setAttribute('aria-pressed', false); micBtn.firstChild.textContent = '押している間だけ録音'; micBtn.querySelector('small').textContent = '録音だけ。離すと聞き返せます（文字は出ません）'; hideWarn(); }
+  if (!SR) { recOnMode(); showWarn('このブラウザでは音声の文字起こしが使えません。録音して聞くことはできます。文字で比べるときはiPhoneのSafariで開いてください。'); }
   else {
     rec = new SR(); rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
     rec.onresult = e => { interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { const tx = e.results[i][0].transcript; if (e.results[i].isFinal) finalText += tx; else interim += tx; } $('said').textContent = (finalText + interim) || '…'; };
-    rec.onstart = () => { if (listening && target && !mr) startRecording(target.i); };
     rec.onerror = e => {
-      if (e.error === 'audio-capture' && recordOn) { recOff('録音と文字起こしを同時に使えませんでした。「文字だけ」に切り替えました。'); return; } if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('マイクか音声認識が許可されていません。設定 → アプリ → Safari → マイク、と 設定 → Siri（音声入力）を確認してください。'); };
+if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('マイクか音声認識が許可されていません。設定 → アプリ → Safari → マイク、と 設定 → Siri（音声入力）を確認してください。'); };
     rec.onend = () => { if (listening) { try { rec.start(); } catch (_) {} } else finish(); };
   }
   function start(ev) {
-    if (!rec || micBtn.disabled || listening) return;
+    if (micBtn.disabled || listening) return;
+    if (!recordOn && !rec) return;
     ev.preventDefault();
     target = cards[cur]; if (!target || target.k === 'sub') return;
     finalText = ''; interim = ''; listening = true; t0 = performance.now();
-    micBtn.classList.add('on'); micBtn.firstChild.textContent = '聞いています…';
-    $('said').textContent = '…'; $('cmp').textContent = '—'; $('stats').innerHTML = '';
-    try { rec.start(); } catch (_) {}
+    micBtn.classList.add('on'); micBtn.firstChild.textContent = recordOn ? '録音しています…' : '聞いています…';
+    $('cmp').textContent = '—'; $('stats').innerHTML = '';
+    if (recordOn) { $('said').textContent = '（録音中。文字は出ません）'; startRecording(target.i); }
+    else { $('said').textContent = '…'; try { rec.start(); } catch (_) {} }
   }
   function stop(ev) {
     if (!listening) return;
     if (ev) ev.preventDefault();
     listening = false; target.sec = Math.round((performance.now() - t0) / 100) / 10;
-    micBtn.classList.remove('on'); micBtn.firstChild.textContent = '押している間だけ聞く';
-    setTimeout(() => { try { rec.stop(); } catch (_) { finish(); } stopRecording(); }, 250); // 言い終わりを取りこぼさない
+    micBtn.classList.remove('on'); micBtn.firstChild.textContent = recordOn ? '押している間だけ録音' : '押している間だけ聞く';
+    if (recordOn) {
+      const t = target; target = null;
+      setTimeout(stopRecording, 250);
+      $('said').textContent = '録音しました。下の「▶ 自分の声を聞き返す」で聞けます。えっと・間・言い直しを耳で確かめてください';
+      $('stats').innerHTML = `<span>秒 <b class="${t.sec > secsOf(t.t) * 1.3 ? 'bad' : 'good'}">${t.sec}</b>（目安 ${secsOf(t.t)}）</span>`;
+      return;
+    }
+    setTimeout(() => { try { rec.stop(); } catch (_) { finish(); } }, 250); // 言い終わりを取りこぼさない
   }
   function finish() {
     if (!target) return;
@@ -356,8 +365,8 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   });
   const setFilter = v => { filter = v; $('fAll').setAttribute('aria-pressed', v === 'all'); $('fMust').setAttribute('aria-pressed', v === 'must'); render(); };
   $('fAll').addEventListener('click', () => setFilter('all'));
-  $('rOn').addEventListener('click', () => { recordOn = true; $('rOn').setAttribute('aria-pressed', true); $('rOff').setAttribute('aria-pressed', false); });
-  $('rOff').addEventListener('click', () => { recOff(); if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } });
+  $('rOn').addEventListener('click', () => { if (!listening) recOnMode(); });
+  $('rOff').addEventListener('click', () => { if (listening) return; if (!rec) { showWarn('このブラウザでは文字起こしが使えません。'); return; } recOff(); });
   $('play').addEventListener('click', () => { const c = cards[cur]; if (!c || !audioByIdx[c.i]) return; if (player) player.pause(); player = new Audio(audioByIdx[c.i]); player.play().catch(() => {}); });
   $('fMust').addEventListener('click', () => setFilter('must'));
   $('copy').addEventListener('click', async () => { const s = report(); try { await navigator.clipboard.writeText(s); $('copy').textContent = 'コピーしました'; } catch (_) { $('copy').textContent = 'コピーできませんでした'; } setTimeout(() => $('copy').textContent = '結果をコピー', 1800); });
