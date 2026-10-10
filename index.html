@@ -13,6 +13,7 @@
   --must:#3a2a06; --must-edge:#e0a526; --must-fg:#f2c14e; --time:#c98a12;
   --miss:#fde2e1; --miss-fg:#b42318; --extra:#dbeafe; --extra-fg:#1e40af; --ok:#15803d;
   --btn:#1a1b1f; --btn-fg:#ffffff; --rec:#b42318;
+  --pc:transparent;
   --font:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -30,7 +31,7 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.7 var(--font);padding:0 0 calc(24px + env(safe-area-inset-bottom))}
 header{background:#1a1b1f;color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px}
 header h1{margin:0;font-size:21px}
-header p{margin:2px 0 0;font-size:14px;color:#a9adb6}
+header p{margin:2px 0 0;font-size:14px;color:rgba(255,255,255,.75)}
 main{padding:12px 16px 0;max-width:720px;margin:0 auto}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
 .file{display:inline-flex;align-items:center;gap:6px;background:var(--btn);color:var(--btn-fg);border-radius:10px;padding:9px 14px;font-size:16px;font-weight:600}
@@ -41,7 +42,7 @@ main{padding:12px 16px 0;max-width:720px;margin:0 auto}
 .info{font-size:14px;color:var(--muted);margin:0 2px 8px}
 .track{display:flex;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .track::-webkit-scrollbar{display:none}
-.card{flex:0 0 88%;scroll-snap-align:center;background:var(--card);color:var(--card-fg);border-radius:14px;padding:16px 16px 12px;min-height:230px;display:flex;flex-direction:column}
+.card{flex:0 0 88%;scroll-snap-align:center;background:var(--card);color:var(--card-fg);border-radius:14px;padding:16px 16px 12px;min-height:230px;display:flex;flex-direction:column;border-top:6px solid var(--pc,transparent)}
 .card .sec{font-size:13.5px;color:var(--card-sub)}
 .card .t{font-size:25px;line-height:1.75;font-weight:600;flex:1;margin:8px 0}
 .card .m{font-size:13.5px;color:var(--time);display:flex;justify-content:space-between;gap:8px}
@@ -119,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-12（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-13（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -219,7 +220,8 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     secs.forEach(s => { if (!s.star) s.lines.forEach(x => { if (x.k === 'say' && MUST_RE.test(x.t) && !NOT_MUST_RE.test(x.t)) x.k = 'must'; }); });
     const out = [];
     secs.forEach(s => s.lines.forEach(x => out.push({sec: s.title, k: x.k, t: x.t})));
-    return {title, cards: out};
+    const cm = md.match(/^[-*\s]*案件カラー[：:]\s*(#[0-9a-fA-F]{6})/m); // 台本ファイルに書いた色（ページには案件の情報を持たない）
+    return {title, cards: out, color: cm ? cm[1] : ''};
   }
 
   const esc = s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -228,10 +230,13 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   function load(md, name) {
     doc = parse(md);
     results = {};
+    // 案件カラー：見出しの帯と、カード上の細い線だけ色を変える（カードの形・決める1文の金色は変えない）
+    document.documentElement.style.setProperty('--pc', doc.color || 'transparent');
+    document.querySelector('header').style.background = doc.color || '';
     $('sub').textContent = name ? `${doc.title || name}（${name}）` : 'サンプルを表示中。台本を読み込むと差し替わります';
     render();
     renderLog();
-    if (!doc.cards.some(c => c.k !== 'sub')) showWarn('このファイルから話す文が見つかりませんでした。台本（…台本….md）を選んでください。');
+    if (!doc.cards.some(c => c.k !== 'sub')) showWarn('このファイルから話す文が見つかりませんでした。台本（…台本….md）か読み合わせ案（…読み合わせ案.md）を選んでください。');
     else hideWarn();
   }
 
