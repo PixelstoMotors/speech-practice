@@ -42,7 +42,7 @@ main{padding:12px 16px 0;max-width:720px;margin:0 auto}
 .info{font-size:14px;color:var(--muted);margin:0 2px 8px}
 .track{display:flex;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding:4px 2px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .track::-webkit-scrollbar{display:none}
-.card{flex:0 0 88%;scroll-snap-align:center;background:var(--card);color:var(--card-fg);border-radius:14px;padding:16px 16px 12px;min-height:230px;display:flex;flex-direction:column;border-top:6px solid var(--pc,transparent)}
+.card{flex:0 0 88%;scroll-snap-align:center;background:var(--card);color:var(--card-fg);border-radius:14px;padding:16px 16px 12px;min-height:230px;display:flex;flex-direction:column}
 .card .sec{font-size:13.5px;color:var(--card-sub)}
 .card .t{font-size:25px;line-height:1.75;font-weight:600;flex:1;margin:8px 0}
 .card .m{font-size:13.5px;color:var(--time);display:flex;justify-content:space-between;gap:8px}
@@ -120,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-14（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-15（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -230,7 +230,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   function load(md, name) {
     doc = parse(md);
     results = {};
-    // 案件カラー：見出しの帯と、カード上の細い線だけ色を変える（カードの形・決める1文の金色は変えない）
+    // 案件カラー：見出しの帯だけ色を変える（カードの上の線は島津さんの判断で入れない 10/10）
     document.documentElement.style.setProperty('--pc', doc.color || 'transparent');
     document.querySelector('header').style.background = doc.color || '';
     $('sub').textContent = name ? `${doc.title || name}（${name}）` : 'サンプルを表示中。台本を読み込むと差し替わります';
