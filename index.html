@@ -121,7 +121,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px" id="saveNote">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-21（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-22（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -315,8 +315,13 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   const ABC = {A:'えー',B:'びー',C:'しー',D:'でぃー',E:'いー',F:'えふ',G:'じー',H:'えいち',I:'あい',J:'じぇー',K:'けー',L:'える',M:'えむ',N:'えぬ',O:'おー',P:'ぴー',Q:'きゅー',R:'あーる',S:'えす',T:'てぃー',U:'ゆー',V:'ぶい',W:'だぶりゅー',X:'えっくす',Y:'わい',Z:'ぜっと'};
   const kata2hira = s => s.replace(/[\u30A1-\u30F6]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
   // 文字起こしの漢字・ひらがなの書き分けは違いに数えない（位＝くらい など）
-  const KANA = [[/位/g, 'くらい'], [/下さい/g, 'ください'], [/頂/g, 'いただ'], [/致し/g, 'いたし'], [/宜しく/g, 'よろしく'], [/分かり/g, 'わかり'], [/判り/g, 'わかり'], [/出来/g, 'でき'], [/恩社/g, '御社'], [/音社/g, '御社']];
-  const kanaFix = s => KANA.reduce((t, [r, k]) => t.replace(r, k), s);
+  // 文字起こしの書き分け・聞き違い（同じ読み）は、台本の書き方にそろえてから比べる（10/10）
+  // 各組の中で台本に出てくる書き方に、話した言葉の別の書き方を置き換える
+  const VARIANTS = [['のうえ', 'の上'], ['とおり', '通り'], ['ほか', '他'], ['沿え', '添え'], ['わかり', '分かり', '判り'], ['ください', '下さい'],
+    ['いたし', '致し'], ['いただ', '頂'], ['でき', '出来'], ['よろしく', '宜しく'], ['くらい', '位'], ['ころ', '頃'], ['ござい', '御座い'],
+    ['原稿', '現行'], ['社内', '車内'], ['御社', '恩社', '音社'], ['意図', '糸'], ['早速', 'さっそく'], ['ありがとう', '有難う']];
+  const align = (script, said) => VARIANTS.reduce((t, g) => { const k = g.find(v => script.includes(v)); return k ? g.filter(v => v !== k).reduce((u, v) => u.split(v).join(k), t) : t; }, said);
+  const kanaFix = s => s;
   const reading = s => kata2hira(kanaFix(norm(wdNorm(s)))).replace(/[A-Za-z]/g, ch => ABC[ch.toUpperCase()] || ch);
   function diff(a, b) { // a=台本, b=話した
     const n = a.length, m = b.length, dp = Array.from({length: n + 1}, () => new Uint16Array(m + 1));
@@ -342,7 +347,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     $('said').textContent = r.raw || '（聞き取れませんでした）';
     $('cmp').innerHTML = opsHtml(r.ops);
     const target = secsOf(c.t);
-    const tcls = r.sec > target * 1.3 ? 'bad' : 'good';
+    const tcls = r.sec > target * 1.3 && r.sec - target >= 1.5 ? 'bad' : 'good'; // 短い文は押す・離すの分で1.3倍を超えやすいので、1.5秒以上の差があるときだけ赤
     const scls = r.score >= 90 ? 'good' : 'bad';
     const xcls = r.extra >= 2 ? 'bad' : 'good';
     const fl = r.fill.tot ? `<span>えっと等（文字に出た分） <b class="bad">${r.fill.tot}</b></span>` : '';
@@ -454,7 +459,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
       const t = target; target = null;
       setTimeout(() => { stopRecording(); beep(false); }, 250);
       $('said').textContent = '録音しました。下の「▶ 自分の声を聞き返す」で聞けます。えっと・間・言い直しを耳で確かめてください';
-      $('stats').innerHTML = `<span>秒 <b class="${t.sec > secsOf(t.t) * 1.3 ? 'bad' : 'good'}">${t.sec}</b>（目安 ${secsOf(t.t)}）</span>`;
+      $('stats').innerHTML = `<span>秒 <b class="${t.sec > secsOf(t.t) * 1.3 && t.sec - secsOf(t.t) >= 1.5 ? 'bad' : 'good'}">${t.sec}</b>（目安 ${secsOf(t.t)}）</span>`;
       return;
     }
     logEv('離した');
@@ -467,7 +472,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
       $('said').textContent = !raw ? (recordOn && target.sec >= 0.6 ? '文字になりませんでした。録音と文字起こしを同時に使えない場合があります。上の「文字だけ」に切り替えて試してください（録音は聞き返せます）' : '聞き取れませんでした。ボタンを押したまま話して、言い終わってから離してください') : 'ボタンを押す時間が短すぎました。押したまま話してください';
       target = null; return;
     }
-    const a = reading(target.t), b = reading(raw);
+    const a = reading(target.t), b = reading(align(target.t, raw));
     const {ops, same} = diff(a, b);
     const score = a.length ? Math.round(same / Math.max(a.length, b.length) * 100) : 0;
     const fs = countFillers(b), fa = countFillers(a); // 台本の「A（えー）」などは数えない
