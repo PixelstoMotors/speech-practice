@@ -77,6 +77,7 @@ main{padding:12px 16px 0;max-width:720px;margin:0 auto}
 .warn{background:var(--miss);color:var(--miss-fg);border-radius:10px;padding:10px 12px;font-size:15px;margin:0 0 10px}
 button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){.track{scroll-behavior:auto}}
+.evlog{font-size:11px;color:#8a8f98;margin-top:6px;line-height:1.5;word-break:break-all}
 </style>
 </head>
 <body>
@@ -107,6 +108,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <h2 style="margin-top:10px">台本との違い</h2>
     <div class="cmp" id="cmp">—</div>
     <div class="stats" id="stats"></div>
+    <div class="evlog" id="evlog"></div>
     <div class="row" id="playRow" hidden><button id="play" type="button">▶ 自分の声を聞き返す</button></div>
     <div class="legend"><span class="miss">赤</span>＝台本にあるのに言わなかった　<span class="extra">青</span>＝台本にない言葉。「言葉以外の時間」は、かかった秒数から話した文字の分（1秒5字）を引いた残りで、えっと・間・言い直しの合計の目安。2秒以上なら赤</div>
   </section>
@@ -117,7 +119,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-9（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-10（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -300,11 +302,27 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   function recOnMode() { recordOn = true; $('rOn').setAttribute('aria-pressed', true); $('rOff').setAttribute('aria-pressed', false); micBtn.firstChild.textContent = '押している間だけ録音'; micBtn.querySelector('small').textContent = '録音だけ。離すと聞き返せます（文字は出ません）'; hideWarn(); }
   if (!SR) { recOnMode(); showWarn('このブラウザでは音声の文字起こしが使えません。録音して聞くことはできます。文字で比べるときはiPhoneのSafariで開いてください。'); }
   else {
-    rec = new SR(); rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
-    rec.onresult = e => { interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { const tx = e.results[i][0].transcript; if (e.results[i].isFinal) finalText += tx; else interim += tx; } $('said').textContent = (finalText + interim) || '…'; };
-    rec.onerror = e => {
-if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('マイクか音声認識が許可されていません。設定 → アプリ → Safari → マイク、と 設定 → Siri（音声入力）を確認してください。'); };
-    rec.onend = () => { if (listening) { try { rec.start(); } catch (_) {} } else finish(); };
+    // 1回押すごとに新しく作る（前回の終わり処理と重なって、押した瞬間に「終わりの音」が鳴るのを防ぐ）
+    rec = makeRec();
+  }
+  let evLog = [], restarts = 0;
+  function logEv(name) { evLog.push(name + ' ' + ((performance.now() - t0) / 1000).toFixed(1)); $('evlog').textContent = '動きの記録：' + evLog.join(' → '); }
+  function makeRec() {
+    const r = new SR(); r.lang = 'ja-JP'; r.continuous = true; r.interimResults = true;
+    r.onstart = () => logEv('開始');
+    r.onaudiostart = () => logEv('マイク');
+    r.onspeechstart = () => logEv('声');
+    r.onresult = e => { if (r !== rec) return; interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { const tx = e.results[i][0].transcript; if (e.results[i].isFinal) finalText += tx; else interim += tx; } $('said').textContent = (finalText + interim) || '…'; };
+    r.onerror = e => {
+      logEv('エラー(' + e.error + ')');
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('マイクか音声認識が許可されていません。設定 → アプリ → Safari → マイク、と 設定 → Siri（音声入力）を確認してください。'); };
+    r.onend = () => {
+      if (r !== rec) return;
+      logEv('終了');
+      if (listening && restarts < 3) { restarts++; finalText += interim; interim = ''; rec = makeRec(); logEv('再開'); try { rec.start(); } catch (_) {} }
+      else finish();
+    };
+    return r;
   }
   function start(ev) {
     if (micBtn.disabled || listening) return;
@@ -315,7 +333,7 @@ if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('�
     micBtn.classList.add('on'); micBtn.firstChild.textContent = recordOn ? '録音しています…' : '聞いています…';
     $('cmp').textContent = '—'; $('stats').innerHTML = '';
     if (recordOn) { $('said').textContent = '（録音中。文字は出ません）'; startRecording(target.i); }
-    else { $('said').textContent = '…'; try { rec.start(); } catch (_) {} }
+    else { $('said').textContent = '…'; evLog = []; restarts = 0; try { rec.abort(); } catch (_) {} rec = makeRec(); logEv('押した'); try { rec.start(); } catch (_) { logEv('開始失敗'); } }
   }
   function stop(ev) {
     if (!listening) return;
@@ -329,6 +347,7 @@ if (e.error === 'not-allowed' || e.error === 'service-not-allowed') showWarn('�
       $('stats').innerHTML = `<span>秒 <b class="${t.sec > secsOf(t.t) * 1.3 ? 'bad' : 'good'}">${t.sec}</b>（目安 ${secsOf(t.t)}）</span>`;
       return;
     }
+    logEv('離した');
     setTimeout(() => { try { rec.stop(); } catch (_) { finish(); } }, 250); // 言い終わりを取りこぼさない
   }
   function finish() {
