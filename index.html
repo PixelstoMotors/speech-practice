@@ -120,7 +120,7 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
     <div class="row"><button id="share" type="button">保存できないとき：共有から保存</button></div>
     <p class="note" style="margin-top:6px">「結果をファイルに保存」は、Safariのダウンロード先にそのまま保存します。最初に1回だけ、iPhoneの 設定 → アプリ → Safari → ダウンロード → その他… で、iCloud Drive → 株式会社GIG → ナレッジ → 練習記録 を選んでおいてください。うまく保存されないときは「共有から保存」を使ってください。</p>
   </section>
-  <p class="note">ページの版：10/10-13（開き直してこの番号になっていれば最新です）</p>
+  <p class="note">ページの版：10/10-14（開き直してこの番号になっていれば最新です）</p>
   <p class="note">台本は、このiPhoneの中で読み込むだけで、どこにも送りません。保存もしないので、開き直したら読み込み直してください。「録音して聞く」の録音も、このページを開いている間だけiPhoneの中に置き、保存も送信もしません（閉じると消えます）。iPhoneでは文字起こしと録音を同時に使えないため、切り替えて使います。音声の文字起こしは、iPhoneの音声入力と同じくAppleの仕組みを使います。iPhoneの文字起こしは「えっと」をほぼ消すため、えっと・間・言い直しは「言葉以外の時間」で見ます。</p>
 </main>
 <script>
@@ -452,7 +452,18 @@ button:focus-visible,.file:focus-within{outline:3px solid var(--must-edge);outli
   });
   $('clear').addEventListener('click', () => { Object.values(audioByIdx).forEach(u => URL.revokeObjectURL(u)); audioByIdx = {}; results = {}; render(); renderLog(); });
 
-  load(SAMPLE, '');
+  // 業務モニターのボタンから開いたとき：URLの「#」より後ろに台本が入っている（#の後ろはサーバーへ送られない）
+  function fromHash() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    const b = h.get('md'); if (!b) return false;
+    try {
+      const bin = atob(b.replace(/-/g, '+').replace(/_/g, '/'));
+      const md = new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+      load(md, h.get('n') || ''); return true;
+    } catch (_) { showWarn('台本を開けませんでした。業務モニターを書き出し直すか、「台本を読み込む」から選んでください。'); return false; }
+  }
+  window.addEventListener('hashchange', fromHash);
+  if (!fromHash()) load(SAMPLE, '');
 })();
 </script>
 </body>
